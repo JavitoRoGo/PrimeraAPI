@@ -3,6 +3,7 @@ import Logging
 import NIOCore
 import NIOPosix
 
+// Este es el punto de entrada de la app, aquí casi nunca vamos a tener que tocar nada
 @main
 enum Entrypoint {
     static func main() async throws {
