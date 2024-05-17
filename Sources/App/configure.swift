@@ -10,5 +10,9 @@ public func configure(_ app: Application) async throws {
 	
 	app.databases.use(DatabaseConfigurationFactory.sqlite(.file("db.sqlite")), as: .sqlite)
 	
+	app.migrations.add(PersonasMigration()) // esto solo se lanza una vez
+	app.migrations.add(CursosMigration())
+	app.migrations.add(PersonasCursosMigration())
+	
 	try routes(app)
 }

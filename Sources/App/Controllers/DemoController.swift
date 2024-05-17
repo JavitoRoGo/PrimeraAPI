@@ -15,6 +15,7 @@ struct DemoController: RouteCollection {
 		let api = routes.grouped("demo") // agrupación de rutas, que estarán todas sobre demo/lo-que-sea
 		// dentro de esta función ponemos todas las rutas, con su .get o .post, su nombre, y la función que tiene que usar
 		api.get("hello", use: hello)
+		api.get("whatsup", ":name", use: whatsup)
 	}
 	
 	// fuera de la función boot pero dentro del struct van todas las funciones que se correspondan con cada uno de los endpoints de la función boot
@@ -27,5 +28,12 @@ struct DemoController: RouteCollection {
 		} else {
 			"Hello"
 		}
+	}
+	
+	@Sendable func whatsup(req: Request) async throws -> String {
+		guard let name = req.parameters.get("name") else {
+			throw Abort(.notFound, reason: "Se necesita la inclusión del parámetro name.")
+		}
+		return "What's Up \(name)"
 	}
 }

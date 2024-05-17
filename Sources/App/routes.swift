@@ -8,8 +8,9 @@ func routes(_ app: Application) throws {
 		"It works!"
 	}
 	
-	// esto viene del controlador:
+	// esto viene del controlador, que hay que registrarlo:
 	try app.routes.register(collection: DemoController())
+	try app.routes.register(collection: PersonaController())
 	
 	// este endpoint es localhost/hello
 	// si queremos captar o pedir un valor, que en la url sería localhost/hello?name=Julio, se hace así
