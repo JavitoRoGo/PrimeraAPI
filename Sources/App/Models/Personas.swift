@@ -16,10 +16,11 @@ import Vapor
 // También conformamos a Content para usarlo como json para enviar y devolver los datos en las peticiones a la DB
 
 final class Personas: Model, Content {
-	static let schema: String = "personas"
+	static let schema: String = "personas" // este es el nombre de la tabla en la DB
 	
 	// el id por defecto es key del tipo UUID, pero lo podemos personalizar con custom
 	// en Vapor, TODOS LOS ID SON OPCIONALES, porque se cargan en la DB antes de escribirse
+	// Vapor crea el id como nil y lo envía a la DB, y entonces Fluent lo recibe y le da el valor que corresponda
 	@ID(key: .id) var id: UUID?
 	
 	// ahora van los campos
@@ -51,4 +52,5 @@ extension Personas: @unchecked Sendable {
 	// Sendable es A type whose values can safely be passed across concurrency domains by copying.
 }
 
-// Para DB el primer paso es crear el modelo, y luego viene la migración, que es como crear la tabla
+// Para DB el primer paso es crear el modelo, y luego viene la migración, que es como crear la tabla. Una vez que ejecutemos la migración en Terminal la tabla estará creada
+// Y si más adelante la modificamos añadiendo o quitando campos, hay que hacer y ejecutar una nueva migración con esos cambios

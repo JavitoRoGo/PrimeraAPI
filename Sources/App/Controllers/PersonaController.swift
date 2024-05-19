@@ -32,15 +32,7 @@ struct PersonaController: RouteCollection {
 			.all()
 	}
 	
-	// si queremos usar las consultas de SQL directamente a la base de datos también se puede, pero la gracia es que Fluent es un ORM y nos evita eso
-	func getPersonasSQL(req: Request) async throws -> [Personas] {
-		if let sql = req.db as? SQLDatabase {
-			return try await sql.raw("SELECT * FROM PERSONAS").all(decodingFluent: Personas.self)
-		} else {
-			throw Abort(.badGateway)
-		}
-	}
-	
+	// en este ejemplo el email nos viene en la url como query del tipo ?email=dato
 	@Sendable func queryEmailPersona(req: Request) async throws -> Personas {
 		guard let email = req.query[String.self, at: "email"] else {
 			throw Abort(.notFound, reason: "No se ha indicado el valor de email a buscar.")
@@ -61,8 +53,8 @@ struct PersonaController: RouteCollection {
 	}
 	
 	@Sendable func queryPersonabyID(req: Request) async throws -> Personas {
-		// si sabemos el id y nos viene en la llamada, podemos hacer la búsqueda con find
-		// el campo ide es el único por el que podemos buscar de manera directa
+		// si sabemos el id y nos viene en la llamada como parámetro, podemos hacer la búsqueda con find
+		// el campo id es el único por el que podemos buscar de manera directa
 		guard let id = req.parameters.get("id", as: UUID.self) else {
 			throw Abort(.notFound, reason: "No se ha recibido un valor de tipo UUID.")
 		}
@@ -97,6 +89,16 @@ struct PersonaController: RouteCollection {
 			return .accepted
 		} else {
 			throw Abort(.badRequest, reason: "No se ha podido borrar el dato.")
+		}
+	}
+	
+	
+	// si queremos usar las consultas de SQL directamente a la base de datos también se puede, pero la gracia es que Fluent es un ORM y nos evita eso
+	func getPersonasSQL(req: Request) async throws -> [Personas] {
+		if let sql = req.db as? SQLDatabase {
+			return try await sql.raw("SELECT * FROM PERSONAS").all(decodingFluent: Personas.self)
+		} else {
+			throw Abort(.badGateway)
 		}
 	}
 }
