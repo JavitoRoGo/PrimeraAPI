@@ -15,6 +15,7 @@ struct PersonaController: RouteCollection {
 		let api = routes.grouped("persona")
 		api.post("create", use: createPersona)
 		api.get("query", use: queryPersonas)
+		api.get("get", use: getPersonas)
 		api.get("queryEmail", use: queryEmailPersona)
 		api.get("query", ":id", use: queryPersonabyID)
 		api.put("update", use: updatePersona)
@@ -29,6 +30,7 @@ struct PersonaController: RouteCollection {
 	
 	@Sendable func queryPersonas(req: Request) async throws -> [Personas] {
 		try await Personas.query(on: req.db)
+			.with(\.$curso) // con esto añadimos la subconsulta asociada a un valor padre
 			.all()
 	}
 	
@@ -37,19 +39,7 @@ struct PersonaController: RouteCollection {
 		guard let email = req.query[String.self, at: "email"] else {
 			throw Abort(.notFound, reason: "No se ha indicado el valor de email a buscar.")
 		}
-		return try await queryEmail(email: email, req: req)
-	}
-	
-	// creamos una función auxiliar de búsqueda por email para reutilizarla en otros endpoints
-	func queryEmail(email: String, req: Request) async throws -> Personas {
-		if let persona = try await Personas.query(on: req.db)
-			.filter(\.$email == email)
-			//			.filter(\.$email, .custom("ILKE"), email) // esta línea solo funcionaría con postgre, y es una operación directa de base de datos para búsqueda case insensitive y sin diacríticos
-			.first() {
-			return persona
-		} else {
-			throw Abort(.notFound, reason: "No existe el email \(email).")
-		}
+		return try await QueryAsistant.shared.queryEmail(email: email, req: req)
 	}
 	
 	@Sendable func queryPersonabyID(req: Request) async throws -> Personas {
@@ -69,7 +59,7 @@ struct PersonaController: RouteCollection {
 		// tenemos que verificar que el dato existe y es correcto, usando un valor único
 		// se hace recuperando un json con los datos a modificar, así que mejor nos hacemos un DTO para eso
 		let query = try req.content.decode(PersonaUpdate.self)
-		let persona = try await queryEmail(email: query.email, req: req) // no tenemos que hacer if-let porque esta función que creamos para reutilizarla ya nos devuelve el error si no existe la persona en la DB
+		let persona = try await QueryAsistant.shared.queryEmail(email: query.email, req: req) // no tenemos que hacer if-let porque esta función que creamos para reutilizarla ya nos devuelve el error si no existe la persona en la DB
 		if let address = query.address {
 			persona.address = address
 		}
@@ -83,7 +73,7 @@ struct PersonaController: RouteCollection {
 	
 	@Sendable func deletePersona(req: Request) async throws -> HTTPStatus {
 		let query = try req.content.decode(PersonaUpdate.self)
-		let persona = try await queryEmail(email: query.email, req: req)
+		let persona = try await QueryAsistant.shared.queryEmail(email: query.email, req: req)
 		if persona.name == query.name {
 			try await persona.delete(on: req.db)
 			return .accepted
@@ -91,6 +81,14 @@ struct PersonaController: RouteCollection {
 			throw Abort(.badRequest, reason: "No se ha podido borrar el dato.")
 		}
 	}
+	
+	@Sendable func getPersonas(req: Request) async throws -> [PersonasSolo] {
+		try await Personas.query(on: req.db)
+			.all()
+			.map(\.toPersonaSolo)
+	}
+	
+	
 	
 	
 	// si queremos usar las consultas de SQL directamente a la base de datos también se puede, pero la gracia es que Fluent es un ORM y nos evita eso

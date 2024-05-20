@@ -11,6 +11,8 @@ func routes(_ app: Application) throws {
 	// esto viene del controlador, que hay que registrarlo:
 	try app.routes.register(collection: DemoController())
 	try app.routes.register(collection: PersonaController())
+	try app.routes.register(collection: CursosController())
+	try app.routes.register(collection: ProjectController())
 	
 	// este endpoint es localhost/hello
 	// si queremos captar o pedir un valor, que en la url sería localhost/hello?name=Julio, se hace así

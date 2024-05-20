@@ -20,3 +20,15 @@ struct PersonaUpdate: Content {
 	let name: String?
 	let address: String?
 }
+
+struct PersonasSolo: Content {
+	// para obtener una consulta con el formato que queramos, un resultado personalizado y no el del model Personas
+	let name: String
+	let email: String
+	let address: String?
+}
+
+struct CursosSolo: Content {
+	let name: String
+	let personas: [PersonasSolo]
+}

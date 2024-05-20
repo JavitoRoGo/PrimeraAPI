@@ -34,12 +34,17 @@ final class Personas: Model, Content {
 //	@Parent(key: "curso") var curso: Cursos // el tipo es el de la otra tabla
 	@OptionalParent(key: "curso") var curso: Cursos? // esta línea la usamos si el curso es opcional, es decir, que no es obligatorio que tenga un curso. En este caso lo hacemos opcional porque ya tenemos datos en la DB, y si hacemos que sea obligatorio peta, porque no estarían esos valores en la DB para cada Persona
 	
+	// nueva relación N-N para el ejemplo con Projects: que vaya desde la tabla que tiene la relación de los dos parents, partiendo de mi campo, al otro campo
+	// igual que @Children, no va en DB, sino que es una propiedad calculada que gestiona Fluent. Por eso tampoco se pone en las migraciones
+	@Siblings(through: PersonasProject.self, from: \.$persona, to: \.$project) var projects: [Projects]
+	
 	// hay que crear el constructor por defecto de la tabla, pero al añadir este desaparece el constructor sintetizado por defecto, por lo que hay que añadirlo para que vuelva a conformar al protocolo: añadir el init vacío
-	init(id: UUID? = nil, name: String, email: String, address: String? = nil) {
+	init(id: UUID? = nil, name: String, email: String, address: String? = nil, curso: Cursos.IDValue? = nil) {
 		self.id = id
 		self.name = name
 		self.email = email
 		self.address = address
+		self.$curso.id = curso // para asignar el curso al crear una Persona, asociamos el id a $curso por referencia
 	}
 	
 	init() {}
@@ -54,3 +59,9 @@ extension Personas: @unchecked Sendable {
 
 // Para DB el primer paso es crear el modelo, y luego viene la migración, que es como crear la tabla. Una vez que ejecutemos la migración en Terminal la tabla estará creada
 // Y si más adelante la modificamos añadiendo o quitando campos, hay que hacer y ejecutar una nueva migración con esos cambios
+
+extension Personas {
+	var toPersonaSolo: PersonasSolo {
+		PersonasSolo(name: name, email: email, address: address)
+	}
+}
