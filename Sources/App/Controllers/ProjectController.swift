@@ -16,7 +16,7 @@ struct ProjectController: RouteCollection {
 		app.get("get", ":id", use: getProject)
 		app.get("getName", ":name", use: getProjectName)
 		app.post("assignPersona", use: assignPersona)
-		app.post("deassignPersona", use: deassignPersona)
+		app.delete("deassignPersona", use: deassignPersona)
 		app.get("personasAtProject", ":id", use: getPersonasByProject)
 	}
 	
@@ -84,10 +84,30 @@ struct ProjectController: RouteCollection {
 	@Sendable func getPersonasByProject(req: Request) async throws -> [PersonasSolo] {
 		guard let id = req.parameters.get("id", as: UUID.self),
 			  let project = try await Projects.find(id, on: req.db) else { throw Abort(.notFound) }
-		return try await project.$personas // pasamos a través del sibling
+		return try await project.$personas // pasamos a través del sibling como una sub-query
 			.query(on: req.db)
 //			.with(\.$projects) // podríamos añadir los detalles de subconsultas al resultado
 			.all()
 			.map(\.toPersonaSolo)
+	}
+	
+	// ejemplo de transacciones para hacer varias operaciones todas a la vez y no una detrás de otra
+	func testCursoBatch(req: Request) async throws -> HTTPStatus {
+		let personas = try await Personas
+			.query(on: req.db)
+			.all()
+		guard let curso = try await Cursos
+			.query(on: req.db)
+			.filter(\.$nombreCurso == "Vision Dev Program")
+			.first() else { throw Abort(.notFound) }
+		try await req.db.transaction { db in
+			// las operaciones indicadas dentro de este closure se realizan todas a la vez
+			// lo malo de este ejemplo sería que si falla alguna de las operaciones se cancela toda la transacción y no se guarda nada
+			for persona in personas {
+				persona.$curso.id = curso.id
+				try await persona.update(on: req.db)
+			}
+		}
+		return .accepted
 	}
 }

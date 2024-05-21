@@ -14,6 +14,7 @@ struct PersonasProjectMigration: AsyncMigration {
 			.id()
 			.field("project", .uuid, .references(Projects.schema, .id), .required)
 			.field("persona", .uuid, .references(Personas.schema, .id), .required)
+//			.unique(on: "project", "persona") // sería bueno poner esta restricción, pero se queda comentada porque la migración ya está lanzada
 			.create()
 	}
 	

@@ -49,7 +49,7 @@ struct CursosController: RouteCollection {
 			  let email = req.query[String.self, at: "email"] else {
 			return .notFound
 		}
-		let persona = try await QueryAsistant.shared.queryEmail(email: email, req: req)
+		let persona = try await QueryAsistant.shared.queryEmail(email: email, db: req.db)
 		persona.$curso.id = id // para actualizar el curso de la persona se hace asignando el id
 		try await persona.update(on: req.db)
 		return .accepted

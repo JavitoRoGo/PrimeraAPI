@@ -20,6 +20,9 @@ struct PersonaController: RouteCollection {
 		api.get("query", ":id", use: queryPersonabyID)
 		api.put("update", use: updatePersona)
 		api.delete("delete", use: deletePersona)
+		api.post("assignProject", use: assignProjectToPerson)
+		api.delete("deassignProject", use: deassignProjectToPerson)
+		api.get("getProject", use: getProjectFromPersona)
 	}
 	
 	@Sendable func createPersona(req: Request) async throws -> HTTPStatus {
@@ -39,7 +42,7 @@ struct PersonaController: RouteCollection {
 		guard let email = req.query[String.self, at: "email"] else {
 			throw Abort(.notFound, reason: "No se ha indicado el valor de email a buscar.")
 		}
-		return try await QueryAsistant.shared.queryEmail(email: email, req: req)
+		return try await QueryAsistant.shared.queryEmail(email: email, db: req.db)
 	}
 	
 	@Sendable func queryPersonabyID(req: Request) async throws -> Personas {
@@ -59,7 +62,7 @@ struct PersonaController: RouteCollection {
 		// tenemos que verificar que el dato existe y es correcto, usando un valor único
 		// se hace recuperando un json con los datos a modificar, así que mejor nos hacemos un DTO para eso
 		let query = try req.content.decode(PersonaUpdate.self)
-		let persona = try await QueryAsistant.shared.queryEmail(email: query.email, req: req) // no tenemos que hacer if-let porque esta función que creamos para reutilizarla ya nos devuelve el error si no existe la persona en la DB
+		let persona = try await QueryAsistant.shared.queryEmail(email: query.email, db: req.db) // no tenemos que hacer if-let porque esta función que creamos para reutilizarla ya nos devuelve el error si no existe la persona en la DB
 		if let address = query.address {
 			persona.address = address
 		}
@@ -73,7 +76,7 @@ struct PersonaController: RouteCollection {
 	
 	@Sendable func deletePersona(req: Request) async throws -> HTTPStatus {
 		let query = try req.content.decode(PersonaUpdate.self)
-		let persona = try await QueryAsistant.shared.queryEmail(email: query.email, req: req)
+		let persona = try await QueryAsistant.shared.queryEmail(email: query.email, db: req.db)
 		if persona.name == query.name {
 			try await persona.delete(on: req.db)
 			return .accepted
@@ -86,6 +89,36 @@ struct PersonaController: RouteCollection {
 		try await Personas.query(on: req.db)
 			.all()
 			.map(\.toPersonaSolo)
+	}
+	
+	@Sendable func assignProjectToPerson(req: Request) async throws -> HTTPStatus {
+		let query = try req.content.decode(ProjectPersonasQuery.self)
+		let project = try await QueryAsistant.shared.queryName(name: query.name, db: req.db)
+		let persona = try await QueryAsistant.shared.queryEmail(email: query.email, db: req.db)
+		try await persona.$projects.attach(project, method: .ifNotExists, on: req.db)
+		return .accepted
+	}
+	
+	@Sendable func deassignProjectToPerson(req: Request) async throws -> HTTPStatus {
+		let query = try req.content.decode(ProjectPersonasQuery.self)
+		let project = try await QueryAsistant.shared.queryName(name: query.name, db: req.db)
+		let persona = try await QueryAsistant.shared.queryEmail(email: query.email, db: req.db)
+		if try await persona.$projects.isAttached(to: project, on: req.db) {
+			try await persona.$projects.detach(project, on: req.db)
+			return .accepted
+		} else {
+			throw Abort(.notFound)
+		}
+	}
+	
+	@Sendable func getProjectFromPersona(req: Request) async throws -> [Projects] {
+		guard let email = req.query[String.self, at: "email"] else {
+			throw Abort(.notFound, reason: "No se ha indicado el valor de email a buscar.")
+		}
+		let persona = try await QueryAsistant.shared.queryEmail(email: email, db: req.db)
+		return try await persona.$projects
+			.query(on: req.db)
+			.all()
 	}
 	
 	

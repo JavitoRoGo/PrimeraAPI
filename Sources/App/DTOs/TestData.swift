@@ -32,3 +32,9 @@ struct CursosSolo: Content {
 	let name: String
 	let personas: [PersonasSolo]
 }
+
+// para asignar un proyecto a una persona de forma más fácil
+struct ProjectPersonasQuery: Content {
+	let email: String
+	let name: String
+}
