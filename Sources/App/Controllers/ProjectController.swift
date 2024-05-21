@@ -53,7 +53,8 @@ struct ProjectController: RouteCollection {
 	// ahora viene lo bueno: necesitamos un registro específico dentro de la tabla PersonasProjects
 	// está TOTALMENTE PROHIBIDO escribir o borrar en la tabla pivot, para eso usamos los métodos attach y detach
 	@Sendable func assignPersona(req: Request) async throws -> HTTPStatus {
-		// rescatamos el dato a actualizar que nos pasan
+		// rescatamos el dato a actualizar que nos pasan, que es un registro de la tabla pivot
+		// esta es la forma más directa de hacerlo, que no la mejor
 		let relation = try req.content.decode(PersonasProject.self)
 		// por cada id tenemos que recuperar el elemento de Persona y de Project
 		if let project = try await Projects.find(relation.$project.id, on: req.db),
@@ -71,6 +72,7 @@ struct ProjectController: RouteCollection {
 		if let project = try await Projects.find(relation.$project.id, on: req.db),
 		   let persona = try await Personas.find(relation.$persona.id, on: req.db),
 		   try await project.$personas.isAttached(to: persona, on: req.db) {
+			// para desasociar un registro es igual que asociarlo, salvo que primero tenemos que comprobar que está asociado
 			try await project.$personas.detach(persona, on: req.db)
 			
 			return .accepted
@@ -84,6 +86,7 @@ struct ProjectController: RouteCollection {
 			  let project = try await Projects.find(id, on: req.db) else { throw Abort(.notFound) }
 		return try await project.$personas // pasamos a través del sibling
 			.query(on: req.db)
+//			.with(\.$projects) // podríamos añadir los detalles de subconsultas al resultado
 			.all()
 			.map(\.toPersonaSolo)
 	}
